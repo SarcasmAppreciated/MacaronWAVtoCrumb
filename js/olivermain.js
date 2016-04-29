@@ -1,6 +1,10 @@
+// WAV file to Macaron input conversion
+// Used Project Nayuki's FFT library and the Web Audio API
+
 $(document).ready(function(){
     var y, Fs;
 
+    // Takes WAV file as input
     $('#audio_file').change(function (e) {
         
         var file = e.currentTarget.files[0];
@@ -34,8 +38,8 @@ $(document).ready(function(){
 
     });
 
-    function parseData (){
-        
+    // This code was translated from MATLAB code
+    function parseData (){        
         var frame_duration = 0.025;
         var frame_length = frame_duration * Fs;
         var Nsamps = y.length;
@@ -43,12 +47,14 @@ $(document).ready(function(){
         var step_size = Math.ceil(Fs * step_percent);
         var num_frames = Math.floor((Nsamps - frame_length) / step_size);
         
-        var t = []; // t = (1/Fs) * (1 : Nsamps);        
+        // JS translation of MATLAB code: t = (1/Fs) * (1 : Nsamps);   
+        var t = [];             
         for (var i = 1; i <= Nsamps; i++) {
            t.push(i * 1 / Fs);
         }
 
-        var f = []; // f = Fs * (0 : frame_length / 2 - 1) / frame_length;
+        // JS translation of MATLAB code: f = Fs * (0 : frame_length / 2 - 1) / frame_length;
+        var f = [];
         for (var i = 1; i <= frame_length; i++) { // REMOVED THE DIVISOR
            f.push(i * Fs / frame_length);
         }
@@ -61,20 +67,26 @@ $(document).ready(function(){
             ymax.push(-1);
         }
         
-        for (var k = 0; k < num_frames; k++) { // for k = 1 : num_frames
-            var frame = y.slice(k * step_size, frame_length + k * step_size); // frame = y((k - 1) * step_size + 1: frame_length + (k - 1) * step_size ); 
+        // JS translation of MATLAB code: for k = 1 : num_frames
+        for (var k = 0; k < num_frames; k++) { 
+            // JS translation of MATLAB code: frame = y((k - 1) * step_size + 1: frame_length + (k - 1) * step_size );
+            var frame = y.slice(k * step_size, frame_length + k * step_size);
             
-            var indexMax = frame.indexOf(Math.max.apply(null, frame)); // indexMax = find(max(frame) == frame);
-            ymax[k] = Math.abs(frame[indexMax]); // ymax(k) = abs(unique(frame(indexMax)));
+            // JS translation of MATLAB code: indexMax = find(max(frame) == frame);
+            var indexMax = frame.indexOf(Math.max.apply(null, frame));
+            // JS translation of MATLAB code: ymax(k) = abs(unique(frame(indexMax)));
+            ymax[k] = Math.abs(frame[indexMax]); 
                         
             var y_fft = fft(frame.length, frame);
             for (var i = 0; i < frame.length; i++) {
                 y_fft[i] = Math.abs(y_fft[i]);                
             }                        
             
-            //  y_fft = y_fft.splice(0, frame_length / 2); // Discard Half of Points
+            // Discard Half of Points - not needed with current FFT library as we do not deal with imaginary part            
+            // JS translation of MATLAB code:  y_fft = y_fft.splice(0, frame_length / 2);
             
-            var indexMax_fft = y_fft.indexOf(Math.max.apply(null, y_fft)); // indexMax_fft = find(max(y_fft) == y_fft);
+            // JS translation of MATLAB code: indexMax_fft = find(max(y_fft) == y_fft);
+            var indexMax_fft = y_fft.indexOf(Math.max.apply(null, y_fft));
             xmax_fft[k] = f[indexMax_fft];
         }
         
@@ -87,7 +99,7 @@ $(document).ready(function(){
         createJSON(ymax, xmax_fft, t_max);
     }
     
-    
+    // Project Nayuki's FFT library used; we return the real part of the frequency domain
     function fft(len, data){
         var real = [];
         var imag = []; 
@@ -106,6 +118,7 @@ $(document).ready(function(){
         var ampsTest = createDataArray(ymax);
         var freqTest = createDataArray(xmax_fft);
         
+        // Add time domain to each data point (instead of arbitrary time)
         var ampsTimeTest = createDataArray(ymax, t_max);
         var freqTimeTest = createDataArray(xmax_fft, t_max);
         
